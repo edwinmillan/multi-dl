@@ -2,6 +2,7 @@ import asyncio
 import youtube_dl
 import typing
 import click
+from tqdm import tqdm
 
 
 class CustomLogger:
@@ -13,23 +14,11 @@ class CustomLogger:
             print('DEBUG', msg)
 
     def warning(self, msg):
-        print('WARNING', msg)
+        if self.verbose:
+            print('WARNING', msg)
 
     def error(self, msg):
         print('ERROR', msg)
-
-
-class FileProgress:
-    def __init__(self, filename, downloaded_bytes, total_bytes, done):
-        self.filename: filename
-        self.downloaded_bytes: downloaded_bytes
-        self.total_bytes: total_bytes
-        self.done: done
-
-
-class Coordinator:
-    def __init__(self, **kwargs):
-        pass
 
 
 def get_playlist(playlist_file: typing.IO) -> str:
@@ -40,6 +29,7 @@ def get_playlist(playlist_file: typing.IO) -> str:
 
 
 def download_video(url: str, options: dict = None):
+    tqdm.write(f'Downloading {url}')
     ydl_opts = options or {
         'logger': CustomLogger(verbose=False),
     }
@@ -60,7 +50,8 @@ async def async_main(playlist_file):
 
     tasks = [run_in_executor(download_video, url) for url in urls]
 
-    await asyncio.gather(*tasks)
+    for future in tqdm(asyncio.as_completed(tasks), total=len(tasks)):
+        await future
 
 
 @click.command()
